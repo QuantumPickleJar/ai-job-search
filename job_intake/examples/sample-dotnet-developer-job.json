@@ -1,0 +1,59 @@
+{
+  "id": "2026-06-05_example_software_labs_junior_dotnet_developer",
+  "source": "manual",
+  "source_url": "https://example.com/jobs/junior-dotnet-developer",
+  "captured_at": "2026-06-05T13:52:00-05:00",
+  "title": "Junior .NET Developer",
+  "company": "Example Software Labs",
+  "location": "Appleton, WI",
+  "remote_status": "hybrid",
+  "employment_type": "full-time",
+  "seniority": "junior",
+  "description_text": "Example Software Labs is seeking a Junior .NET Developer to help build and maintain internal business applications used by operations, customer support, and reporting teams. In this role, you will work with senior engineers to develop backend services in C# and ASP.NET Core, write SQL queries, troubleshoot production issues, and contribute to API integrations between line-of-business systems. This is an early-career role suited to someone comfortable learning in a collaborative engineering environment.",
+  "raw_text": "Junior .NET Developer - Example Software Labs - Appleton, WI - Hybrid. Build internal business applications with C#, ASP.NET Core, SQL Server, REST APIs, Git, and Agile practices. Early-career candidates are encouraged to apply.",
+  "requirements": [
+    "Working knowledge of C# and the .NET ecosystem",
+    "Experience building or maintaining web applications or APIs",
+    "Basic SQL skills and comfort working with relational data",
+    "Ability to debug application issues and document findings",
+    "Familiarity with Git-based development workflows",
+    "Strong communication skills and willingness to learn from senior engineers"
+  ],
+  "preferred_qualifications": [
+    "Exposure to ASP.NET Core or Entity Framework",
+    "Experience with SQL Server, PostgreSQL, or MySQL",
+    "Familiarity with TypeScript, Angular, or another frontend framework",
+    "Basic understanding of Docker or CI/CD pipelines",
+    "Internship, capstone, freelance, or personal project experience with backend development"
+  ],
+  "technologies": [
+    "C#",
+    ".NET",
+    "ASP.NET Core",
+    "Entity Framework",
+    "SQL Server",
+    "REST APIs",
+    "Git",
+    "TypeScript",
+    "Angular",
+    "Docker"
+  ],
+  "responsibilities": [
+    "Develop and maintain backend features for internal web applications",
+    "Write SQL queries and assist with data troubleshooting",
+    "Implement and test REST API endpoints",
+    "Participate in code reviews and Agile planning sessions",
+    "Document technical decisions, defects, and support procedures",
+    "Collaborate with product owners and senior developers to clarify requirements"
+  ],
+  "compensation": {
+    "min": null,
+    "max": null,
+    "currency": "USD",
+    "raw": "Not listed"
+  },
+  "fit_analysis": null,
+  "application_status": "captured",
+  "capture_method": "manual_sample",
+  "notes": "Placeholder sample job for local-first workflow development. Not a real posting."
+}
