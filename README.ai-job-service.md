@@ -9,17 +9,22 @@ Deployment guide for the Phase 3 local-first job application service.
 Use this order:
 
 1. [`README.md`](README.md) - project overview, upstream Claude workflow, and the working Phase 2 local scripts.
-2. [`README.ai-job-service.md`](README.ai-job-service.md) - this guide; Raspberry Pi service operation and workflow reference.
+2. [`README.ai-job-service.md`](README.ai-job-service.md) - this guide; service purpose, setup, configuration, and workflow reference.
 3. [`docs/phase-3-service-architecture.md`](docs/phase-3-service-architecture.md) - security boundaries, component responsibilities, networking, and persistence design.
 4. [`docs/phase-3-setup-wizard-design.md`](docs/phase-3-setup-wizard-design.md) - role-based setup contract and safety boundaries.
-5. [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) - complete Pi Compose deployment and maintenance runbook.
-6. [`docs/remote-access.md`](docs/remote-access.md) - LAN, Tailscale, Funnel, and Cloudflare Access guidance.
-7. [`extensions/linkedin-job-clipper/README.md`](extensions/linkedin-job-clipper/README.md) - optional Chrome/Edge extension installation and single-job capture flow.
-8. [`documents/README.md`](documents/README.md) - optional source-document organization for the upstream profile setup workflow.
-9. [`tools/README_SALARY_TOOL.md`](tools/README_SALARY_TOOL.md) - optional salary benchmarking tool.
-10. [`SETUP.md`](SETUP.md) - detailed setup for the original Claude/Bun/LaTeX workflow; it is not required for the Phase 3 local service MVP.
+5. [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) - Raspberry Pi installation and Compose deployment.
+6. [`docs/service-runbook.md`](docs/service-runbook.md) - routine operation, upgrades, backups, API-key rotation, and incident recovery.
+7. [`docs/remote-access.md`](docs/remote-access.md) - LAN, Tailscale, Funnel, and Cloudflare Access guidance.
+8. [`extensions/linkedin-job-clipper/README.md`](extensions/linkedin-job-clipper/README.md) - optional Chrome/Edge extension installation and single-job capture flow.
+9. [`documents/README.md`](documents/README.md) - optional source-document organization for the upstream profile setup workflow.
+10. [`tools/README_SALARY_TOOL.md`](tools/README_SALARY_TOOL.md) - optional salary benchmarking tool.
+11. [`SETUP.md`](SETUP.md) - detailed setup for the original Claude/Bun/LaTeX workflow; it is not required for the Phase 3 local service MVP.
 
 The root `README.md` remains the general entry point. This service README does not replace it.
+
+For a new service installation, read this file through **Prepare the Repository**, then follow
+[`deploy/raspberry-pi.md`](deploy/raspberry-pi.md). After deployment, use
+[`docs/service-runbook.md`](docs/service-runbook.md) for routine administration.
 
 ## Purpose
 
@@ -121,7 +126,7 @@ cp .env.example .env
 
 Never commit `.env`, API keys, tunnel credentials, VPN keys, or Access tokens.
 
-See [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) for the complete Pi setup, storage-permission, networking, and troubleshooting guide.
+See [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) for complete Pi setup, storage permissions, networking, and first-start verification.
 
 For guided setup:
 
@@ -263,6 +268,9 @@ docker compose -f docker-compose.service.yml down
 ```
 
 Do not add `--volumes` to routine shutdown commands unless you have verified exactly which named volumes would be removed.
+
+For upgrades, consistent backups, restore procedures, API-key rotation, and failure recovery, use
+[`docs/service-runbook.md`](docs/service-runbook.md).
 
 ## Health Checks
 
@@ -499,6 +507,9 @@ An unusual port number alone is not security.
 
 ## Troubleshooting
 
+This section covers initial checks. The operational decision tree and recovery procedures are in
+[`docs/service-runbook.md`](docs/service-runbook.md).
+
 ### Docker Compose cannot find the deployment
 
 Run Compose from the repository root and specify the deployment file:
@@ -610,4 +621,4 @@ Local model output is advisory even when it is valid JSON. Human review is manda
 
 ## What Comes Next
 
-The next Phase 3 prompt should add acceptance tests for Compose rendering, container health, mounted-data persistence, service/API reachability, and queued processing behavior.
+The next Phase 3 work should add deployment acceptance tests for Compose rendering, container health, mounted-data persistence, service/API reachability, and queued processing behavior.
