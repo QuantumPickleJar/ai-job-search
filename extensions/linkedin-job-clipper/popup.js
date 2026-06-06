@@ -1,4 +1,5 @@
 const INTAKE_URL = "http://localhost:3927/jobs/capture";
+const extensionApi = globalThis.browser ?? globalThis.chrome;
 
 const elements = {
   title: document.getElementById("title"),
@@ -46,7 +47,7 @@ function renderCapture(job) {
 }
 
 async function getActiveTab() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabs = await extensionApi.tabs.query({ active: true, currentWindow: true });
   return tabs[0];
 }
 
@@ -60,7 +61,7 @@ async function captureCurrentJob() {
     throw new Error("Open a LinkedIn job page before using the clipper.");
   }
 
-  return chrome.tabs.sendMessage(tab.id, { type: "CAPTURE_LINKEDIN_JOB" });
+  return extensionApi.tabs.sendMessage(tab.id, { type: "CAPTURE_LINKEDIN_JOB" });
 }
 
 async function saveCapturedJob() {

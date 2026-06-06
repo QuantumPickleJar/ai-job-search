@@ -3,6 +3,12 @@
   "name": "LinkedIn Job Clipper",
   "version": "0.1.0",
   "description": "Capture the currently open LinkedIn job posting and save it to the local ai-job-search intake server.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "linkedin-job-clipper@local.ai-job-search",
+      "strict_min_version": "128.0"
+    }
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "Save LinkedIn job"

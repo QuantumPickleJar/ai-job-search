@@ -1,3 +1,5 @@
+const extensionApi = globalThis.browser ?? globalThis.chrome;
+
 function cleanText(value) {
   return (value || "").replace(/\s+/g, " ").trim();
 }
@@ -83,7 +85,7 @@ function extractLinkedInJob() {
   };
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.type !== "CAPTURE_LINKEDIN_JOB") {
     return false;
   }
