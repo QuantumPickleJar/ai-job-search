@@ -394,9 +394,21 @@ def application_detail(
         )
 
     files = application.get("files", {})
+    display_order = (
+        "fit-analysis.json",
+        "resume-targeting.md",
+        "cover-letter-notes.md",
+        "application-checklist.md",
+        "job.json",
+    )
     content = "".join(
-        render_file(filename, value)
-        for filename, value in files.items()
+        render_file(
+            filename,
+            files[filename],
+            expanded=filename != "job.json",
+        )
+        for filename in display_order
+        if filename in files
     )
     if not content:
         content = empty_state(

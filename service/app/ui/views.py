@@ -255,15 +255,16 @@ def text_block(title: str, value: Any) -> str:
     )
 
 
-def render_file(filename: str, value: Any) -> str:
+def render_file(filename: str, value: Any, *, expanded: bool = True) -> str:
     if isinstance(value, (dict, list)):
         content = json.dumps(value, ensure_ascii=False, indent=2)
         language = "json"
     else:
         content = str(value)
         language = "markdown" if filename.endswith(".md") else "text"
+    open_attribute = " open" if expanded else ""
     return f"""
-<details class="file-view" open>
+<details class="file-view"{open_attribute}>
   <summary><span>{escape(filename)}</span><small>{language}</small></summary>
   <pre>{escape(content)}</pre>
 </details>

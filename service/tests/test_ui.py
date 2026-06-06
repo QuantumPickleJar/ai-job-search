@@ -40,6 +40,12 @@ class UiSafetyTests(unittest.TestCase):
         self.assertNotIn("<img", rendered)
         self.assertIn("&lt;img", rendered)
 
+    def test_application_file_can_render_collapsed(self) -> None:
+        rendered = render_file("job.json", {"title": "Example"}, expanded=False)
+
+        self.assertIn('<details class="file-view">', rendered)
+        self.assertNotIn('<details class="file-view" open>', rendered)
+
     def test_source_link_rejects_non_http_scheme(self) -> None:
         rendered = source_link("javascript:alert(1)")
 

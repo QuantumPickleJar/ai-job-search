@@ -702,6 +702,11 @@ label > span {
     max-width: 100%;
     display: flex;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sidebar nav::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-link {
