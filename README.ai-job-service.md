@@ -2,19 +2,21 @@
 
 Deployment guide for the Phase 3 local-first job application service.
 
-> **Current status:** The containerized FastAPI service, health endpoints, filesystem-backed APIs, JSON-backed processing queue, and server-rendered web UI are implemented. Docker Compose deployment remains for a later Phase 3 prompt.
+> **Current status:** The containerized FastAPI service, health endpoints, filesystem-backed APIs, JSON-backed processing queue, server-rendered web UI, and Raspberry Pi Compose deployment are implemented.
 
 ## Which README Should I Read?
 
 Use this order:
 
 1. [`README.md`](README.md) - project overview, upstream Claude workflow, and the working Phase 2 local scripts.
-2. [`README.ai-job-service.md`](README.ai-job-service.md) - this guide; planned Raspberry Pi service deployment and operation.
+2. [`README.ai-job-service.md`](README.ai-job-service.md) - this guide; Raspberry Pi service operation and workflow reference.
 3. [`docs/phase-3-service-architecture.md`](docs/phase-3-service-architecture.md) - security boundaries, component responsibilities, networking, and persistence design.
-4. [`extensions/linkedin-job-clipper/README.md`](extensions/linkedin-job-clipper/README.md) - optional Chrome/Edge extension installation and single-job capture flow.
-5. [`documents/README.md`](documents/README.md) - optional source-document organization for the upstream profile setup workflow.
-6. [`tools/README_SALARY_TOOL.md`](tools/README_SALARY_TOOL.md) - optional salary benchmarking tool.
-7. [`SETUP.md`](SETUP.md) - detailed setup for the original Claude/Bun/LaTeX workflow; it is not required for the Phase 3 local service MVP.
+4. [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) - complete Pi Compose deployment and maintenance runbook.
+5. [`docs/remote-access.md`](docs/remote-access.md) - LAN, Tailscale, Funnel, and Cloudflare Access guidance.
+6. [`extensions/linkedin-job-clipper/README.md`](extensions/linkedin-job-clipper/README.md) - optional Chrome/Edge extension installation and single-job capture flow.
+7. [`documents/README.md`](documents/README.md) - optional source-document organization for the upstream profile setup workflow.
+8. [`tools/README_SALARY_TOOL.md`](tools/README_SALARY_TOOL.md) - optional salary benchmarking tool.
+9. [`SETUP.md`](SETUP.md) - detailed setup for the original Claude/Bun/LaTeX workflow; it is not required for the Phase 3 local service MVP.
 
 The root `README.md` remains the general entry point. This service README does not replace it.
 
@@ -110,13 +112,15 @@ git clone <YOUR_FORK_URL>
 cd ai-job-search
 ```
 
-Create local service configuration from the committed example:
+Create local deployment configuration from the committed example:
 
 ```bash
-cp service/.env.example service/.env
+cp .env.example .env
 ```
 
 Never commit `.env`, API keys, tunnel credentials, VPN keys, or Access tokens.
+
+See [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) for the complete Pi setup, storage-permission, networking, and troubleshooting guide.
 
 ## Environment Configuration
 
@@ -181,14 +185,23 @@ Captured jobs, profile facts, model diagnostics, and generated application works
 
 ## Docker Compose Commands
 
-These are the expected commands after the Compose deployment is implemented. The current image can also be built directly from `service/Dockerfile`.
+Use the Raspberry Pi Compose file from the repository root:
+
+```bash
+docker compose \
+  -f docker-compose.service.yml \
+  --env-file .env \
+  up -d --build
+```
+
+The image can also be built directly from `service/Dockerfile`.
 
 Current direct-image commands:
 
 ```bash
 docker build -f service/Dockerfile -t ai-job-service .
 docker run --rm \
-  --env-file service/.env \
+  --env-file .env \
   -v "$(pwd)/data:/app/data" \
   -p 3927:3927 \
   ai-job-service
@@ -197,37 +210,37 @@ docker run --rm \
 Build:
 
 ```bash
-docker compose build
+docker compose -f docker-compose.service.yml --env-file .env build
 ```
 
 Start or update:
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.service.yml --env-file .env up -d --build
 ```
 
 Inspect service state:
 
 ```bash
-docker compose ps
+docker compose -f docker-compose.service.yml ps
 ```
 
 Follow logs:
 
 ```bash
-docker compose logs -f ai-job-service
+docker compose -f docker-compose.service.yml logs -f ai-job-service
 ```
 
 Restart:
 
 ```bash
-docker compose restart ai-job-service
+docker compose -f docker-compose.service.yml restart ai-job-service
 ```
 
 Stop containers without deleting mounted data:
 
 ```bash
-docker compose down
+docker compose -f docker-compose.service.yml down
 ```
 
 Do not add `--volumes` to routine shutdown commands unless you have verified exactly which named volumes would be removed.
@@ -467,16 +480,20 @@ An unusual port number alone is not security.
 
 ## Troubleshooting
 
-### Docker Compose files do not exist
+### Docker Compose cannot find the deployment
 
-The service image is implemented, but the Raspberry Pi Compose file remains for a later Phase 3 prompt. Use the direct `docker build` and `docker run` commands above until that deployment file is added.
+Run Compose from the repository root and specify the deployment file:
+
+```bash
+docker compose -f docker-compose.service.yml --env-file .env config
+```
 
 ### Service health endpoint is unreachable
 
 Check:
 
-- `docker compose ps`;
-- `docker compose logs ai-job-service`;
+- `docker compose -f docker-compose.service.yml ps`;
+- `docker compose -f docker-compose.service.yml logs ai-job-service`;
 - the configured host-port mapping;
 - Pi firewall rules;
 - whether the selected Tailscale/VPN/tunnel route reaches the Pi; and
@@ -531,7 +548,7 @@ Confirm the request uses `Content-Type: application/json` and includes non-empty
 ### A task stays queued
 
 - Confirm the service process is healthy.
-- Check `docker compose logs ai-job-service`.
+- Check `docker compose -f docker-compose.service.yml logs ai-job-service`.
 - Verify only one service process is using the mounted task directory.
 
 ### A task fails
@@ -574,8 +591,4 @@ Local model output is advisory even when it is valid JSON. Human review is manda
 
 ## What Comes Next
 
-The next Phase 3 prompt should add secure remote-access guidance or Raspberry Pi Compose deployment. Remaining work includes:
-
-1. secure remote-access runbooks;
-2. Raspberry Pi Docker Compose deployment; and
-3. Phase 3 acceptance tests.
+The next Phase 3 prompt should add acceptance tests for Compose rendering, container health, mounted-data persistence, service/API reachability, and queued processing behavior.
