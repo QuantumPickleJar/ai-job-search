@@ -2,7 +2,7 @@
 
 Deployment guide for the Phase 3 local-first job application service.
 
-> **Current status:** Phase 3 service implementation has not been added yet. This document defines the intended operator workflow and command contract. Docker, health, and service API commands become runnable after the containerized service and API prompts are completed.
+> **Current status:** The containerized FastAPI skeleton and `/health` endpoints are implemented. Docker Compose deployment and job API commands remain interface targets for later Phase 3 prompts.
 
 ## Which README Should I Read?
 
@@ -110,10 +110,10 @@ git clone <YOUR_FORK_URL>
 cd ai-job-search
 ```
 
-After the Phase 3 deployment files exist, create local configuration from the committed example:
+Create local service configuration from the committed example:
 
 ```bash
-cp .env.example .env
+cp service/.env.example service/.env
 ```
 
 Never commit `.env`, API keys, tunnel credentials, VPN keys, or Access tokens.
@@ -180,7 +180,17 @@ Captured jobs, profile facts, model diagnostics, and generated application works
 
 ## Docker Compose Commands
 
-These are the expected commands after the service skeleton and Compose deployment are implemented.
+These are the expected commands after the Compose deployment is implemented. The current image can also be built directly from `service/Dockerfile`.
+
+Current direct-image commands:
+
+```bash
+docker build -t ai-job-service ./service
+docker run --rm \
+  --env-file service/.env \
+  -p 3927:3927 \
+  ai-job-service
+```
 
 Build:
 
@@ -222,7 +232,7 @@ Do not add `--volumes` to routine shutdown commands unless you have verified exa
 
 ## Health Checks
 
-The planned health endpoints are:
+The implemented health endpoints are:
 
 ```bash
 curl --fail http://localhost:3927/health
@@ -245,7 +255,13 @@ It should distinguish:
 - configured model missing; and
 - malformed Ollama response.
 
-The exact response schema will be defined by the Phase 3 configuration and API-contract prompts.
+`GET /health` returns HTTP 200 with:
+
+```json
+{"status": "ok"}
+```
+
+`GET /health/ollama` returns HTTP 200 when Ollama is reachable and `OLLAMA_MODEL` is installed. It returns HTTP 503 for an unreachable endpoint, malformed tags response, no installed models, or a missing configured model. Responses do not include `APP_API_KEY` or `OLLAMA_BASE_URL`.
 
 ## Submit a Job
 
@@ -499,4 +515,3 @@ The next Phase 3 prompt should create the containerized service skeleton and Doc
 5. secure remote-access runbooks;
 6. Raspberry Pi Docker Compose deployment; and
 7. Phase 3 acceptance tests.
-
