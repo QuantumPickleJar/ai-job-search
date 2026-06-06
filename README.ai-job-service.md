@@ -619,6 +619,19 @@ Before using any generated material:
 
 Local model output is advisory even when it is valid JSON. Human review is mandatory.
 
+## Acceptance Tests
+
+Run the Phase 3 service and setup-wizard acceptance suite from the repository root:
+
+```bash
+python scripts/run_phase3_acceptance_tests.py
+```
+
+The suite starts the service on a random localhost port, writes only to temporary directories,
+and uses a local fake Ollama endpoint to verify both reachable and unreachable behavior. It does
+not require Docker, a Raspberry Pi, public internet, Tailscale, Cloudflare, or a running Ollama
+installation. Docker and real Ollama availability remain diagnostics reported by the setup wizard.
+
 ## What Comes Next
 
-The next Phase 3 work should add deployment acceptance tests for Compose rendering, container health, mounted-data persistence, service/API reachability, and queued processing behavior.
+The final Phase 3 prompt can build on this tested service, wizard, and deployment baseline.
