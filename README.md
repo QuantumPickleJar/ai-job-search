@@ -76,7 +76,7 @@ The server listens only on `127.0.0.1:3927` and saves normalized JSON files unde
 
 ### Load the LinkedIn clipper
 
-See [`extensions/linkedin-job-clipper/README.md`](extensions/linkedin-job-clipper/README.md) for Chrome and Microsoft Edge installation instructions. The extension operates only after a manual click, previews one currently open LinkedIn job, and sends it only to the localhost intake server.
+See [`extensions/linkedin-job-clipper/README.md`](extensions/linkedin-job-clipper/README.md) for Chrome, Edge, Firefox, and Opera installation notes. The extension operates only after a manual click, previews one currently open LinkedIn job, and sends it only to the localhost intake server.
 
 It intentionally does not crawl search results, capture jobs in bulk, automate Easy Apply, scrape profiles/recruiters/contacts, extract login data, message people, or submit applications.
 

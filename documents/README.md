@@ -25,7 +25,7 @@ documents/
 
 ## cv/
 
-Your master CV — the most complete, unedited version of your professional record.
+Your master CV or resume — the terms are interchangeable here. Use whichever you call it; both belong in this folder.
 
 **Supported formats:** `.pdf`, `.tex`
 

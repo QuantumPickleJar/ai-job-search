@@ -56,6 +56,24 @@ The browser communicates with the Pi service. The Pi service calls Ollama throug
 
 See [`docs/phase-3-service-architecture.md`](docs/phase-3-service-architecture.md) for the complete trust-boundary and failure-mode design.
 
+## Offline Command Runner
+
+For local developer workflows that previously depended on the `.claude/commands/*.md` specs, use `python scripts/agent_runner.py` to run those command files against the existing Ollama provider. The runner keeps everything offline, shows any proposed file changes as diffs, and requires explicit confirmation before it writes files.
+
+The runner now includes a small terminal UI for interactive local use. It groups each turn into summary, questions, and proposed-change sections without depending on any external terminal library. Pass `--plain` if you want the original line-oriented output for piping or scripting.
+
+For `/apply`, the runner can now pull a job posting directly from an HTTP(S) URL with `--job-url`. If the model proposes `.tex` files under `cv/` or `cover_letters/` and you confirm the write, the runner performs deterministic LaTeX compile hooks outside the model: `lualatex` for CVs, `xelatex` for cover letters, plus a local PDF page-count check. This is a smoke gate only; visual human review is still required before submission.
+
+Examples:
+
+```bash
+python scripts/agent_runner.py setup
+python scripts/agent_runner.py expand --non-interactive
+python scripts/agent_runner.py setup --plain
+python scripts/agent_runner.py apply --job-file job_intake/captured_jobs/example.json
+python scripts/agent_runner.py apply --job-url https://example.com/jobs/123
+```
+
 ## Requirements
 
 ### Raspberry Pi service host
