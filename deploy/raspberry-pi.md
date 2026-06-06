@@ -57,6 +57,12 @@ Create the ignored local environment file:
 cp .env.example .env
 ```
 
+Or run the master setup wizard:
+
+```bash
+python3 scripts/setup_wizard.py --role service-host
+```
+
 Record the Pi user's numeric ownership:
 
 ```bash
@@ -64,7 +70,7 @@ id -u
 id -g
 ```
 
-Set those values as `APP_UID` and `APP_GID` in `.env`. This lets the non-root container write the bind-mounted `./data` directory without changing the service to run as root.
+Set those values as `PUID` and `PGID` in `.env`. The setup wizard can do this automatically. This lets the non-root container write the bind-mounted `./data` directory without changing the service to run as root.
 
 Create persistent storage:
 
@@ -76,10 +82,9 @@ chmod 700 data
 Edit `.env` and replace every placeholder. At minimum:
 
 ```env
-APP_UID=1000
-APP_GID=1000
-APP_BIND_ADDRESS=127.0.0.1
-APP_HOST=0.0.0.0
+PUID=1000
+PGID=1000
+APP_HOST=127.0.0.1
 APP_PORT=3927
 APP_DATA_DIR=/app/data
 OLLAMA_BASE_URL=http://192.168.1.50:11434
@@ -103,7 +108,7 @@ Paste the generated value into the ignored `.env` file. Never commit `.env`.
 Recommended for Tailscale Serve or Cloudflare Tunnel:
 
 ```env
-APP_BIND_ADDRESS=127.0.0.1
+APP_HOST=127.0.0.1
 ENABLE_REMOTE_MODE=true
 ```
 
@@ -116,7 +121,7 @@ See [`docs/remote-access.md`](../docs/remote-access.md) before enabling remote m
 For initial LAN testing, bind to the Pi's reserved private address:
 
 ```env
-APP_BIND_ADDRESS=192.168.1.20
+APP_HOST=192.168.1.20
 ENABLE_REMOTE_MODE=false
 ```
 
@@ -125,7 +130,7 @@ Use the actual Pi address. Prefer a DHCP reservation. Do not use router port for
 Binding to `0.0.0.0` is possible but broader than necessary:
 
 ```env
-APP_BIND_ADDRESS=0.0.0.0
+APP_HOST=0.0.0.0
 ```
 
 Use it only when the Pi has multiple trusted private interfaces and its firewall is configured accordingly.
@@ -224,11 +229,13 @@ docker compose \
 The container:
 
 - restarts unless explicitly stopped;
-- runs as `APP_UID:APP_GID`;
+- runs as `PUID:PGID`;
 - mounts `./data` at `/app/data`;
 - reads application settings from `.env`;
-- publishes `APP_PORT` only on `APP_BIND_ADDRESS`; and
+- publishes `APP_PORT` only on `APP_HOST`; and
 - checks `GET /health` every 30 seconds.
+
+`APP_HOST` selects the Pi host interface used for Docker port publication. Compose separately makes the application process listen on `0.0.0.0` inside the container; that internal bind is not a public exposure by itself.
 
 ## Verify
 
@@ -311,10 +318,10 @@ Confirm the host directory ownership and `.env` values:
 ls -ld data
 id -u
 id -g
-grep -E '^(APP_UID|APP_GID)=' .env
+grep -E '^(PUID|PGID)=' .env
 ```
 
-Set `APP_UID` and `APP_GID` to the Pi account that owns `data`, then recreate the container:
+Set `PUID` and `PGID` to the Pi account that owns `data`, then recreate the container:
 
 ```bash
 docker compose -f docker-compose.service.yml down
@@ -366,7 +373,7 @@ docker compose \
 
 ### Remote client cannot connect
 
-Confirm `APP_BIND_ADDRESS` matches the selected mode:
+Confirm `APP_HOST` matches the selected mode:
 
 - `127.0.0.1` for Tailscale Serve or Cloudflare Tunnel;
 - the Pi's private IP for LAN access; or

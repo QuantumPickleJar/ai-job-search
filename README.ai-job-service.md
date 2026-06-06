@@ -11,12 +11,13 @@ Use this order:
 1. [`README.md`](README.md) - project overview, upstream Claude workflow, and the working Phase 2 local scripts.
 2. [`README.ai-job-service.md`](README.ai-job-service.md) - this guide; Raspberry Pi service operation and workflow reference.
 3. [`docs/phase-3-service-architecture.md`](docs/phase-3-service-architecture.md) - security boundaries, component responsibilities, networking, and persistence design.
-4. [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) - complete Pi Compose deployment and maintenance runbook.
-5. [`docs/remote-access.md`](docs/remote-access.md) - LAN, Tailscale, Funnel, and Cloudflare Access guidance.
-6. [`extensions/linkedin-job-clipper/README.md`](extensions/linkedin-job-clipper/README.md) - optional Chrome/Edge extension installation and single-job capture flow.
-7. [`documents/README.md`](documents/README.md) - optional source-document organization for the upstream profile setup workflow.
-8. [`tools/README_SALARY_TOOL.md`](tools/README_SALARY_TOOL.md) - optional salary benchmarking tool.
-9. [`SETUP.md`](SETUP.md) - detailed setup for the original Claude/Bun/LaTeX workflow; it is not required for the Phase 3 local service MVP.
+4. [`docs/phase-3-setup-wizard-design.md`](docs/phase-3-setup-wizard-design.md) - role-based setup contract and safety boundaries.
+5. [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) - complete Pi Compose deployment and maintenance runbook.
+6. [`docs/remote-access.md`](docs/remote-access.md) - LAN, Tailscale, Funnel, and Cloudflare Access guidance.
+7. [`extensions/linkedin-job-clipper/README.md`](extensions/linkedin-job-clipper/README.md) - optional Chrome/Edge extension installation and single-job capture flow.
+8. [`documents/README.md`](documents/README.md) - optional source-document organization for the upstream profile setup workflow.
+9. [`tools/README_SALARY_TOOL.md`](tools/README_SALARY_TOOL.md) - optional salary benchmarking tool.
+10. [`SETUP.md`](SETUP.md) - detailed setup for the original Claude/Bun/LaTeX workflow; it is not required for the Phase 3 local service MVP.
 
 The root `README.md` remains the general entry point. This service README does not replace it.
 
@@ -122,12 +123,29 @@ Never commit `.env`, API keys, tunnel credentials, VPN keys, or Access tokens.
 
 See [`deploy/raspberry-pi.md`](deploy/raspberry-pi.md) for the complete Pi setup, storage-permission, networking, and troubleshooting guide.
 
+For guided setup:
+
+```bash
+python scripts/setup_wizard.py
+```
+
+Direct role commands:
+
+```bash
+python scripts/setup_wizard.py --role model-runner
+python scripts/setup_wizard.py --role service-host
+python scripts/setup_wizard.py --role all-in-one
+python scripts/setup_wizard.py --diagnostics
+```
+
 ## Environment Configuration
 
 The minimum configuration is:
 
 ```env
-APP_HOST=0.0.0.0
+PUID=1000
+PGID=1000
+APP_HOST=127.0.0.1
 APP_PORT=3927
 APP_DATA_DIR=/app/data
 OLLAMA_BASE_URL=http://<PRIVATE_WINDOWS_ADDRESS>:11434
@@ -138,7 +156,8 @@ ENABLE_REMOTE_MODE=false
 
 | Variable | Purpose |
 |---|---|
-| `APP_HOST` | Container-internal listen address. `0.0.0.0` does not by itself authorize public access. |
+| `PUID` / `PGID` | Linux user and group used by the non-root service container for mounted-data ownership. |
+| `APP_HOST` | Pi host interface used by the Compose port publication. Defaults to loopback. |
 | `APP_PORT` | Internal/default service port. Compose or a reverse proxy may map another host or external port to it. |
 | `APP_DATA_DIR` | Container path for mounted persistent data. |
 | `OLLAMA_BASE_URL` | Private LAN or tailnet URL for the Windows Ollama instance. |
@@ -203,7 +222,7 @@ docker build -f service/Dockerfile -t ai-job-service .
 docker run --rm \
   --env-file .env \
   -v "$(pwd)/data:/app/data" \
-  -p 3927:3927 \
+  -p 127.0.0.1:3927:3927 \
   ai-job-service
 ```
 
