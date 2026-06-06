@@ -88,7 +88,11 @@ async function saveCapturedJob() {
     setStatus(`Saved: ${payload.path || payload.id || "captured job"}`, "success");
   } catch (error) {
     elements.saveButton.disabled = false;
-    setStatus(`Save failed: ${error.message}`, "error");
+    const message =
+      error instanceof TypeError
+        ? "Local intake server is not reachable at http://localhost:3927. Start it with: python scripts\\job_intake_server.py"
+        : error.message;
+    setStatus(`Save failed: ${message}`, "error");
   }
 }
 

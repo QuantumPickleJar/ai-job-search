@@ -77,6 +77,10 @@ STRING_ANALYSIS_FIELDS = ["suggested_resume_angle", "cover_letter_angle"]
 OPTIONAL_STRING_ANALYSIS_FIELDS = ["confidence"]
 RECOMMENDATIONS = {"apply", "maybe", "skip"}
 CONFIDENCE_VALUES = {"low", "medium", "high"}
+PROFILE_CONTEXT_FILES = [
+    "resume_facts.md",
+    "disallowed_claims.md",
+]
 
 
 class FitScoringError(RuntimeError):
@@ -84,11 +88,16 @@ class FitScoringError(RuntimeError):
 
 
 def load_profile_context(repo_root: Path) -> str:
-    resume_facts = repo_root / "profile" / "resume_facts.md"
-    if resume_facts.exists():
-        text = resume_facts.read_text(encoding="utf-8").strip()
+    sections = []
+    for filename in PROFILE_CONTEXT_FILES:
+        path = repo_root / "profile" / filename
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8").strip()
         if text:
-            return text
+            sections.append(f"## Source: profile/{filename}\n\n{text}")
+    if sections:
+        return "\n\n".join(sections)
     return MINIMAL_PROFILE_CONTEXT
 
 
