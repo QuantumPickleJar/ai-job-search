@@ -41,4 +41,6 @@
 ## Manual Review Notes
 
 - Add location, commute, remote/hybrid/on-site preferences, and salary expectations only after review.
+- Remote okay, on-site within 50 miles of Oshkosh, WI
+- salary range: minimum $15 an hour
 - Add target companies or industries if useful.
