@@ -89,7 +89,7 @@ class Settings:
             "OLLAMA_MODEL",
             os.environ.get("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
         )
-        app_api_key = os.environ.get("APP_API_KEY", "")
+        app_api_key = os.environ.get("APP_API_KEY", "").strip()
         enable_remote_mode = parse_bool(
             "ENABLE_REMOTE_MODE",
             os.environ.get("ENABLE_REMOTE_MODE", "false"),

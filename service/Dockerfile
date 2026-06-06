@@ -8,11 +8,15 @@ RUN addgroup --system app \
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY service/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-COPY --chown=app:app app ./app
+COPY --chown=app:app service/app ./app
+COPY --chown=app:app ai_job_search ./ai_job_search
+
+RUN mkdir -p /app/data \
+    && chown app:app /app/data
 
 USER app
 

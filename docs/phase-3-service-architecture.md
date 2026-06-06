@@ -177,15 +177,16 @@ Capture must not require Ollama. A sleeping or unavailable Windows workstation m
 ### Model-processing flow
 
 1. The user explicitly requests fit scoring or application workspace preparation.
-2. The Pi service loads the captured job and curated profile facts from mounted storage.
-3. Workflow code calls the generic `ModelProvider`.
-4. The Ollama provider sends the request to `${OLLAMA_BASE_URL}/api/chat` over the private network.
-5. The service validates structured model output before accepting it.
-6. Valid JSON and Markdown outputs are written to mounted application storage.
-7. Malformed model output is retained for local diagnosis and returned as a clear processing failure.
-8. The user reviews generated output before any final document or application action.
+2. The Pi service persists a `queued` task and immediately returns its task identifier.
+3. A single background worker marks the task `running` and loads the captured job and curated profile facts from mounted storage.
+4. Workflow code calls the generic `ModelProvider`.
+5. The Ollama provider sends the request to `${OLLAMA_BASE_URL}/api/chat` over the private network.
+6. The service validates structured model output before accepting it.
+7. Valid JSON and Markdown outputs are written to mounted application storage and the task is marked `succeeded`.
+8. Malformed model output is retained for local diagnosis and the task is marked `failed`.
+9. The user polls the task endpoint and reviews generated output before any final document or application action.
 
-Long-running model work should move to the Phase 3 queue design rather than holding an ingress request open indefinitely.
+Task records are JSON files under mounted storage. Queued tasks are restored after a service restart. A task interrupted while `running` is marked `failed` because the single-process queue cannot prove that its work completed safely.
 
 ## Container and Compose Design
 
@@ -225,6 +226,7 @@ Generated data must be mounted from Pi host storage or named Docker volumes. A r
     processed_jobs/
     rejected_jobs/
   applications/
+  tasks/
   profile/
   logs/
 ```
@@ -319,7 +321,18 @@ Phase 3 does not include:
 
 ## Deployment and Verification Commands
 
-This ticket is documentation-only, so there is no service command to run yet. Later Phase 3 prompts are expected to support commands similar to:
+The service image can be built from the repository root:
+
+```bash
+docker build -f service/Dockerfile -t ai-job-service .
+docker run --rm \
+  --env-file service/.env \
+  -v "$(pwd)/data:/app/data" \
+  -p 3927:3927 \
+  ai-job-service
+```
+
+The later Raspberry Pi Compose prompt is expected to support:
 
 ```bash
 docker compose build
@@ -329,14 +342,12 @@ docker compose logs -f ai-job-service
 docker compose down
 ```
 
-Expected health checks after implementation:
+Implemented health checks:
 
 ```bash
 curl http://localhost:3927/health
 curl http://localhost:3927/health/ollama
 ```
-
-These are architecture targets, not currently implemented interfaces.
 
 ## Assumptions
 
@@ -369,10 +380,7 @@ The next prompt should create the user-facing service README and deployment prer
 1. the containerized service skeleton and Dockerfile;
 2. configuration loading and health checks;
 3. authenticated API contracts;
-4. queued model processing and status;
-5. a basic review-oriented web UI;
-6. secure remote access runbooks;
-7. Raspberry Pi Compose deployment; and
-8. Phase 3 acceptance tests.
-
-No service code, Dockerfile, Compose file, remote-access configuration, or secret was added by this architecture ticket.
+4. a basic review-oriented web UI;
+5. secure remote access runbooks;
+6. Raspberry Pi Compose deployment; and
+7. Phase 3 acceptance tests.

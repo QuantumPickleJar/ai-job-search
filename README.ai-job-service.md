@@ -2,7 +2,7 @@
 
 Deployment guide for the Phase 3 local-first job application service.
 
-> **Current status:** The containerized FastAPI skeleton and `/health` endpoints are implemented. Docker Compose deployment and job API commands remain interface targets for later Phase 3 prompts.
+> **Current status:** The containerized FastAPI service, health endpoints, filesystem-backed job/application APIs, and JSON-backed processing queue are implemented. Docker Compose deployment and the web UI remain for later Phase 3 prompts.
 
 ## Which README Should I Read?
 
@@ -120,7 +120,7 @@ Never commit `.env`, API keys, tunnel credentials, VPN keys, or Access tokens.
 
 ## Environment Configuration
 
-The planned minimum configuration is:
+The minimum configuration is:
 
 ```env
 APP_HOST=0.0.0.0
@@ -139,7 +139,7 @@ ENABLE_REMOTE_MODE=false
 | `APP_DATA_DIR` | Container path for mounted persistent data. |
 | `OLLAMA_BASE_URL` | Private LAN or tailnet URL for the Windows Ollama instance. |
 | `OLLAMA_MODEL` | Installed Ollama model used by the provider. |
-| `APP_API_KEY` | Planned defense-in-depth credential for service requests. Store only in local secret configuration. |
+| `APP_API_KEY` | Defense-in-depth credential required by mutating endpoints when configured. Store only in local secret configuration. |
 | `ENABLE_REMOTE_MODE` | Must remain `false` until authentication, allowed origins, and secure ingress are configured. |
 
 Example private Ollama URLs:
@@ -165,6 +165,7 @@ data/
     processed_jobs/
     rejected_jobs/
   applications/
+  tasks/
   profile/
   logs/
 ```
@@ -185,9 +186,10 @@ These are the expected commands after the Compose deployment is implemented. The
 Current direct-image commands:
 
 ```bash
-docker build -t ai-job-service ./service
+docker build -f service/Dockerfile -t ai-job-service .
 docker run --rm \
   --env-file service/.env \
+  -v "$(pwd)/data:/app/data" \
   -p 3927:3927 \
   ai-job-service
 ```
@@ -265,7 +267,7 @@ It should distinguish:
 
 ## Submit a Job
 
-The planned capture endpoint is:
+The implemented capture endpoint is:
 
 ```text
 POST /jobs/capture
@@ -322,11 +324,11 @@ Invoke-RestMethod `
     -Body $body
 ```
 
-A successful implementation should return a job identifier and saved path without requiring Ollama to be online.
+A successful request returns the normalized job, identifier, and saved path without requiring Ollama to be online. `X-API-Key` is required when `APP_API_KEY` is configured.
 
 ## Process a Job
 
-The planned processing endpoint is:
+The implemented processing endpoint is:
 
 ```text
 POST /jobs/<JOB_ID>/process
@@ -342,7 +344,19 @@ curl --fail-with-body \
   -H "X-API-Key: ${APP_API_KEY}"
 ```
 
-Model processing may be slow. The Phase 3 API and queue prompts will define whether this endpoint returns a completed result or a task identifier that can be polled.
+Model processing creates a persisted task and returns HTTP 202:
+
+```json
+{
+  "status": "queued",
+  "job_id": "<JOB_ID>",
+  "task_id": "<TASK_ID>"
+}
+```
+
+A single background worker runs tasks in order and delegates to the Phase 2 apply-from-file workflow. Task state is stored under `data/tasks/`.
+
+The current queue assumes one service process per mounted `APP_DATA_DIR`. Do not start multiple Uvicorn workers or multiple service containers against the same task directory.
 
 Expected persisted output:
 
@@ -356,6 +370,35 @@ data/applications/<safe-company-role-slug>/
 ```
 
 Processing must validate model JSON before writing a valid-looking fit analysis. Malformed output should be retained for diagnosis and reported as a failure.
+
+## Monitor Processing Tasks
+
+```bash
+curl --fail "${SERVICE_BASE_URL}/tasks"
+curl --fail "${SERVICE_BASE_URL}/tasks/<TASK_ID>"
+```
+
+Task states are:
+
+- `queued`
+- `running`
+- `succeeded`
+- `failed`
+
+Tasks left in `queued` state are restored after a service restart. A task interrupted while `running` is marked `failed` because completion cannot be proven safely.
+
+## List Jobs and Applications
+
+Read-only endpoints do not require `X-API-Key` at this stage:
+
+```bash
+curl --fail "${SERVICE_BASE_URL}/jobs"
+curl --fail "${SERVICE_BASE_URL}/jobs/<JOB_ID>"
+curl --fail "${SERVICE_BASE_URL}/applications"
+curl --fail "${SERVICE_BASE_URL}/applications/<APPLICATION_ID>"
+```
+
+The application detail endpoint returns only the known workspace files. It does not provide arbitrary filesystem access.
 
 ## Remote Access Recommendations
 
@@ -407,7 +450,7 @@ An unusual port number alone is not security.
 
 ### Docker Compose files do not exist
 
-Expected during this documentation ticket. Complete the containerized service skeleton and Raspberry Pi Compose prompts before running deployment commands.
+The service image is implemented, but the Raspberry Pi Compose file remains for a later Phase 3 prompt. Use the direct `docker build` and `docker run` commands above until that deployment file is added.
 
 ### Service health endpoint is unreachable
 
@@ -466,12 +509,18 @@ Confirm the request uses `Content-Type: application/json` and includes non-empty
 - `company`; and
 - `description_text`.
 
-### Processing times out
+### A task stays queued
+
+- Confirm the service process is healthy.
+- Check `docker compose logs ai-job-service`.
+- Verify only one service process is using the mounted task directory.
+
+### A task fails
 
 - Confirm Ollama is responsive locally on Windows.
 - Test with a smaller installed model.
 - Review service timeout configuration after it is implemented.
-- Use the planned asynchronous queue instead of keeping a remote request open.
+- Inspect `GET /tasks/<TASK_ID>` and verify Ollama connectivity with `/health/ollama`.
 
 ### Generated output contains weak or unsupported claims
 
@@ -506,12 +555,8 @@ Local model output is advisory even when it is valid JSON. Human review is manda
 
 ## What Comes Next
 
-The next Phase 3 prompt should create the containerized service skeleton and Dockerfile. Later prompts will define:
+The next Phase 3 prompt should add the browser UI. Later prompts will add:
 
-1. environment loading and health response schemas;
-2. authenticated API contracts;
-3. asynchronous job processing and status;
-4. the browser UI;
-5. secure remote-access runbooks;
-6. Raspberry Pi Docker Compose deployment; and
-7. Phase 3 acceptance tests.
+1. secure remote-access runbooks;
+2. Raspberry Pi Docker Compose deployment; and
+3. Phase 3 acceptance tests.
