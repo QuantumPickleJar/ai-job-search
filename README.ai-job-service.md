@@ -2,7 +2,7 @@
 
 Deployment guide for the Phase 3 local-first job application service.
 
-> **Current status:** The containerized FastAPI service, health endpoints, filesystem-backed job/application APIs, and JSON-backed processing queue are implemented. Docker Compose deployment and the web UI remain for later Phase 3 prompts.
+> **Current status:** The containerized FastAPI service, health endpoints, filesystem-backed APIs, JSON-backed processing queue, and server-rendered web UI are implemented. Docker Compose deployment remains for a later Phase 3 prompt.
 
 ## Which README Should I Read?
 
@@ -264,6 +264,25 @@ It should distinguish:
 ```
 
 `GET /health/ollama` returns HTTP 200 when Ollama is reachable and `OLLAMA_MODEL` is installed. It returns HTTP 503 for an unreachable endpoint, malformed tags response, no installed models, or a missing configured model. Responses do not include `APP_API_KEY` or `OLLAMA_BASE_URL`.
+
+## Web UI
+
+Open the local service dashboard:
+
+```text
+http://localhost:3927/ui
+```
+
+The server-rendered interface includes:
+
+- dashboard counts and recent processing activity;
+- manual job submission;
+- captured job search and detail pages;
+- queued fit-analysis actions;
+- application workspace lists and file review; and
+- service and Ollama health status.
+
+The UI does not call Ollama from browser JavaScript. Job processing remains a server-side queued action. When `APP_API_KEY` is configured, mutating forms request it for that submission and do not persist it in browser storage.
 
 ## Submit a Job
 
@@ -555,7 +574,7 @@ Local model output is advisory even when it is valid JSON. Human review is manda
 
 ## What Comes Next
 
-The next Phase 3 prompt should add the browser UI. Later prompts will add:
+The next Phase 3 prompt should add secure remote-access guidance or Raspberry Pi Compose deployment. Remaining work includes:
 
 1. secure remote-access runbooks;
 2. Raspberry Pi Docker Compose deployment; and

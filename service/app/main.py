@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
-import uvicorn
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.config import SERVICE_NAME, SERVICE_VERSION, get_settings
 from app.routes.applications import router as applications_router
 from app.routes.health import router as health_router
 from app.routes.jobs import router as jobs_router
 from app.routes.tasks import router as tasks_router
+from app.routes.ui import router as ui_router
 from app.services.job_store import JobStore
 from app.services.task_queue import TaskManager
 from app.services.task_store import TaskStore
@@ -44,6 +48,12 @@ app.include_router(health_router)
 app.include_router(jobs_router)
 app.include_router(applications_router)
 app.include_router(tasks_router)
+app.include_router(ui_router)
+app.mount(
+    "/static",
+    StaticFiles(directory=Path(__file__).resolve().parent / "static"),
+    name="static",
+)
 
 
 def run() -> None:
