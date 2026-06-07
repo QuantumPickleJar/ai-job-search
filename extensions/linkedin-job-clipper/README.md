@@ -57,7 +57,7 @@ job_intake/captured_jobs/
 There is no JavaScript build step for this extension. The folder is the source artifact.
 
 - For Chrome, Edge, Firefox development, and Opera development: load the folder directly as an unpacked or temporary extension.
-- For Firefox distribution beyond temporary loading: package the folder as a `.zip`/`.xpi` and sign it.
+- For Firefox distribution beyond temporary loading: package the extension with the included helper script and sign the resulting `.xpi`.
 - For Opera packaging: use Opera's `Pack Extension` flow to create a `.crx` after you have tested the unpacked version.
 
 ## Load In Chrome
@@ -95,13 +95,13 @@ For development or local testing:
 1. Open `about:debugging`.
 2. Click **This Firefox**.
 3. Click **Load Temporary Add-on**.
-4. Open:
+4. In the file picker, open the manifest file directly:
 
 ```text
-extensions/linkedin-job-clipper/
+extensions/linkedin-job-clipper/manifest.json
 ```
 
-5. Select `manifest.json`.
+5. Select that file. Do not select the folder itself, because Firefox treats the chosen file as the add-on package.
 
 Important Firefox notes:
 
@@ -115,9 +115,15 @@ Firefox does not install this repo folder persistently as an end-user add-on unl
 
 Practical flow:
 
-1. Zip the contents of `extensions/linkedin-job-clipper/` so `manifest.json` is at the archive root.
-2. Rename the archive to `.xpi` if you want a Firefox-style package name.
-3. Sign it through Mozilla's add-on distribution flow before expecting normal end-user installation.
+1. From the repository root, run:
+
+```powershell
+python scripts\package_firefox_extension.py
+```
+
+   This writes `extensions/linkedin-job-clipper/linkedin-job-clipper.xpi` with the extension contents at the archive root.
+2. If you prefer to package manually, zip the contents of `extensions/linkedin-job-clipper/` (not the folder itself) so `manifest.json` is at the archive root, then rename the archive to `.xpi`.
+3. Sign the `.xpi` through Mozilla's add-on distribution flow before expecting normal end-user installation.
 
 For local development, the temporary install flow above is the intended path.
 
