@@ -199,7 +199,7 @@ Captured jobs, profile facts, model diagnostics, and generated application works
 
 ## Docker Compose Commands
 
-These are the expected commands after the Compose deployment is implemented. The current image can also be built directly from `service/Dockerfile`.
+Use the checked-in example Compose file at `deploy/docker-compose.phase3.example.yml` as the deployment template on the Pi. If you keep your own `docker-compose.yml`, make sure it points at `service/Dockerfile` and the repo root as build context.
 
 Current direct-image commands:
 
@@ -212,16 +212,16 @@ docker run --rm \
   ai-job-service
 ```
 
-Build:
+Build from the repo root with the example file:
 
 ```bash
-docker compose build
+docker compose -f deploy/docker-compose.phase3.example.yml build
 ```
 
-Start or update:
+Start or update with the example file:
 
 ```bash
-docker compose up -d --build
+docker compose -f deploy/docker-compose.phase3.example.yml up -d --build
 ```
 
 Inspect service state:
@@ -485,9 +485,21 @@ An unusual port number alone is not security.
 
 ## Troubleshooting
 
-### Docker Compose files do not exist
+### Compose is using the wrong build path
 
-The service image is implemented, but the Raspberry Pi Compose file remains for a later Phase 3 prompt. Use the direct `docker build` and `docker run` commands above until that deployment file is added.
+If the Pi UI still shows the old page after a pull, the running container is almost certainly using an older image or the wrong build context. Rebuild from the repo root with the example Compose file:
+
+```bash
+docker compose -f deploy/docker-compose.phase3.example.yml up -d --build
+```
+
+If you use your own `docker-compose.yml`, confirm the build section is:
+
+```yaml
+build:
+  context: .
+  dockerfile: service/Dockerfile
+```
 
 ### Service health endpoint is unreachable
 

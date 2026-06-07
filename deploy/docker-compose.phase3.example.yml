@@ -1,8 +1,8 @@
 services:
   ai-job-service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: service/Dockerfile
     container_name: ai-job-service
     restart: unless-stopped
     ports:
