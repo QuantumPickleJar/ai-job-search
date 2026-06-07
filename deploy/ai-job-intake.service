@@ -1,0 +1,15 @@
+[Unit]
+Description=AI Job Search intake server on the Pi
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=C:\Users\Vincent\git\ai-job-search\ai-job-search
+ExecStart=/usr/bin/python3 scripts/job_intake_server.py --host 0.0.0.0 --port 3927
+Restart=on-failure
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target

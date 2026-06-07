@@ -117,7 +117,7 @@ Ollama may need to listen on a private interface so the Pi can reach it. Do not 
 - Optionally, Chrome or Microsoft Edge with the LinkedIn clipper loaded unpacked.
 - Permission to access the protected Pi service.
 
-The remote extension target will need to be configurable in a later Phase 3 prompt. The current Phase 2 extension targets `http://localhost:3927`.
+The LinkedIn clipper now supports a configurable intake endpoint. Generate the Pi-side setup files with `python scripts\setup_pi_job_intake.py --pi-host <PI_LAN_IP>` and use the emitted `extensions/linkedin-job-clipper/config.js` plus `deploy/ai-job-intake.service` to point the browser at the Pi service.
 
 ## Prepare the Repository
 

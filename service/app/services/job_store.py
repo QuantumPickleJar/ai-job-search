@@ -115,6 +115,20 @@ class JobStore:
                 except OSError as exc:
                     raise InvalidStoredDataError(f"cannot read application file: {filename}") from exc
 
+        generated_dir = path / "generated"
+        if generated_dir.exists():
+            for file_path in sorted(generated_dir.rglob("*")):
+                if file_path.is_symlink() or not file_path.is_file() or file_path.name.startswith("."):
+                    continue
+                relative_name = file_path.relative_to(path).as_posix()
+                try:
+                    if file_path.suffix == ".json":
+                        files[relative_name] = self._read_json(file_path)
+                    else:
+                        files[relative_name] = file_path.read_text(encoding="utf-8")
+                except OSError as exc:
+                    raise InvalidStoredDataError(f"cannot read application file: {relative_name}") from exc
+
         return {
             "application_id": application_id,
             "files": files,

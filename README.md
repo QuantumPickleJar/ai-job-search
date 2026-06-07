@@ -72,7 +72,7 @@ This writes reviewable job, fit-analysis, resume-targeting, cover-letter-notes, 
 python scripts\job_intake_server.py
 ```
 
-The server listens only on `127.0.0.1:3927` and saves normalized JSON files under `job_intake\captured_jobs\`. Stop it with `Ctrl+C`.
+The server listens on `127.0.0.1:3927` by default, or on `0.0.0.0:3927` for Pi deployment. It saves normalized JSON files under `job_intake\captured_jobs\`. Stop it with `Ctrl+C`.
 
 ### Load the LinkedIn clipper
 

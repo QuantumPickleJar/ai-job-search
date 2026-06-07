@@ -6,7 +6,10 @@ from html import escape
 from typing import Any
 from urllib.parse import parse_qs, quote
 
+from ai_job_search.apply_from_file import ApplyFromFileError, generate_cover_letter_draft, load_valid_fit_analysis
 from ai_job_search.intake import JobIntakeError
+from ai_job_search.model_provider import ModelProviderError
+from ai_job_search.providers import OllamaProvider
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -373,6 +376,7 @@ def applications(
 @router.get("/ui/applications/{application_id}", response_class=HTMLResponse)
 def application_detail(
     application_id: str,
+    request: Request,
     settings: Settings = Depends(get_settings),
     store: JobStore = Depends(get_job_store),
 ) -> HTMLResponse:
@@ -394,12 +398,14 @@ def application_detail(
         )
 
     files = application.get("files", {})
+    notice = "" if request.query_params.get("cover_letter") != "1" else "<div class=\"alert alert-success\">Cover letter draft generated and saved to the workspace.</div>"
     display_order = (
         "fit-analysis.json",
         "resume-targeting.md",
         "cover-letter-notes.md",
         "application-checklist.md",
         "job.json",
+        "generated/cover-letter-draft.md",
     )
     content = "".join(
         render_file(
@@ -415,7 +421,13 @@ def application_detail(
             "Workspace is empty",
             "No reviewable application files were found.",
         )
-    body = section(application_id, content)
+    action = f'''
+<form class="process-form" method="post" action="/ui/applications/{quote(application_id, safe='-._~')}/cover-letter">
+  {api_key_field(settings)}
+  <button class="button button-primary" type="submit">Generate cover letter draft</button>
+</form>
+'''
+    body = section(application_id, notice + content, action=action)
     return HTMLResponse(
         page(
             title="Application detail",
@@ -423,6 +435,64 @@ def application_detail(
             body=body,
             settings=settings,
         )
+    )
+
+
+@router.post("/ui/applications/{application_id}/cover-letter", response_class=HTMLResponse)
+async def generate_cover_letter_action(
+    application_id: str,
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    store: JobStore = Depends(get_job_store),
+) -> Response:
+    values = await read_form(request)
+    safe_application_id = quote(application_id, safe="-._~")
+    if not api_key_is_valid(values.get("api_key"), settings):
+        return HTMLResponse(
+            page(
+                title="Authorization required",
+                active="applications",
+                body=empty_state(
+                    "Cover letter was not generated",
+                    "The API key was missing or invalid.",
+                    f'<a class="button" href="/ui/applications/{safe_application_id}">Back to workspace</a>',
+                ),
+                settings=settings,
+            ),
+            status_code=401,
+        )
+
+    try:
+        application = store.get_application(application_id)
+        if not application.get("files"):
+            raise ResourceNotFoundError("application workspace is empty")
+        app_dir = settings.app_data_dir / "applications" / application_id
+        job_path = app_dir / "job.json"
+        fit_path = app_dir / "fit-analysis.json"
+        if not job_path.exists() or not fit_path.exists():
+            raise ResourceNotFoundError("application workspace is incomplete")
+
+        fit = load_valid_fit_analysis(fit_path)
+        provider = OllamaProvider(model=settings.ollama_model, base_url=settings.ollama_base_url)
+        generate_cover_letter_draft(job_path, fit, provider, repo_root=settings.app_data_dir, output_dir=app_dir)
+    except (ApplyFromFileError, ModelProviderError, ResourceNotFoundError, InvalidStoredDataError, OSError) as exc:
+        return HTMLResponse(
+            page(
+                title="Cover letter generation failed",
+                active="applications",
+                body=empty_state(
+                    "Cover letter generation failed",
+                    str(exc),
+                    f'<a class="button" href="/ui/applications/{safe_application_id}">Back to workspace</a>',
+                ),
+                settings=settings,
+            ),
+            status_code=500,
+        )
+
+    return RedirectResponse(
+        f"/ui/applications/{safe_application_id}?cover_letter=1",
+        status_code=303,
     )
 
 

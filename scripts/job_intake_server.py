@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a localhost-only captured job intake server."""
+"""Run the captured-job intake server on localhost or a Pi-facing interface."""
 
 from __future__ import annotations
 
@@ -124,13 +124,13 @@ class JobIntakeHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the localhost-only job intake server.")
-    parser.add_argument("--host", default=DEFAULT_HOST, help="Bind host. Must be 127.0.0.1 or localhost.")
+    parser = argparse.ArgumentParser(description="Run the captured job intake server.")
+    parser.add_argument("--host", default=DEFAULT_HOST, help="Bind host. Use 127.0.0.1, localhost, or 0.0.0.0 for Pi deployment.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Bind port.")
     args = parser.parse_args()
 
-    if args.host not in {"127.0.0.1", "localhost"}:
-        print("ERROR: refusing to bind to a non-localhost address. Use 127.0.0.1 or localhost.", file=sys.stderr)
+    if args.host not in {"127.0.0.1", "localhost", "0.0.0.0"}:
+        print("ERROR: refusing to bind to an unsafe address. Use 127.0.0.1, localhost, or 0.0.0.0.", file=sys.stderr)
         return 1
 
     server = ThreadingHTTPServer((args.host, args.port), JobIntakeHandler)

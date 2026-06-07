@@ -7,9 +7,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ai_job_search.fit_scoring import FitScoringError, score_job_file, validate_fit_analysis
+from ai_job_search.fit_scoring import FitScoringError, load_profile_context, score_job_file, validate_fit_analysis
 from ai_job_search.job_validation import load_json, validate_job
-from ai_job_search.model_provider import ModelProvider
+from ai_job_search.model_provider import ModelProvider, ModelRequest
 
 
 class ApplyFromFileError(RuntimeError):
@@ -190,6 +190,62 @@ def write_application_checklist(path: Path, job: dict[str, Any], fit: dict[str, 
 - Follow-up reminder:
 """
     path.write_text(content, encoding="utf-8")
+
+
+def generate_cover_letter_draft(
+    job_path: Path,
+    fit: dict[str, Any],
+    provider: ModelProvider,
+    repo_root: Path,
+    output_dir: Path | None = None,
+) -> Path:
+    job, load_errors = load_json(job_path)
+    if load_errors:
+        raise ApplyFromFileError("; ".join(load_errors))
+    if not isinstance(job, dict):
+        raise ApplyFromFileError("job validation failed: root value must be an object")
+    output_dir = output_dir or application_dir_for_job(job, repo_root)
+    generated_dir = output_dir / "generated"
+    generated_dir.mkdir(parents=True, exist_ok=True)
+
+    system_prompt = """You are a careful hiring-application assistant.
+Write a polished, grounded cover letter draft in Markdown for the provided role.
+Use only supported profile evidence from the candidate profile and fit analysis.
+Do not invent experience, dates, companies, awards, or technologies.
+Keep the letter concise, professional, and tailored to the job description.
+Return only the letter text, without commentary or bullet lists.
+"""
+
+    user_prompt = f"""Candidate profile context:
+{load_profile_context(repo_root)}
+
+Fit analysis summary:
+{json.dumps(fit, ensure_ascii=False, indent=2)}
+
+Captured job posting:
+{json.dumps(job, ensure_ascii=False, indent=2)}
+
+Write a tailored cover letter draft for this role. Mention the strongest evidence and the most relevant angle, but avoid unsupported claims.
+"""
+
+    response = provider.complete(
+        ModelRequest(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=0.2,
+            max_tokens=1200,
+            response_format="text",
+        )
+    )
+
+    draft_text = response.text.strip()
+    if draft_text.startswith("```"):
+        draft_text = draft_text.strip("`\n")
+        if draft_text.startswith("markdown"):
+            draft_text = draft_text.split("\n", 1)[1]
+    draft_path = generated_dir / "cover-letter-draft.md"
+    draft_path.write_text(draft_text.strip() + "\n", encoding="utf-8")
+    return draft_path
 
 
 def apply_from_file(job_path: Path, provider: ModelProvider, repo_root: Path) -> Path:
