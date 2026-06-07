@@ -7,7 +7,7 @@ Minimal local-only browser extension for saving the currently open LinkedIn job 
 - Runs only when the user opens the extension popup.
 - Captures visible fields from the current LinkedIn job page.
 - Shows a preview before saving.
-- Sends one JSON object to `http://localhost:3927/jobs/capture`.
+- Sends one JSON object to the configured intake URL (default: `http://localhost:3927/jobs/capture`).
 - Stores nothing in browser storage.
 
 Captured fields:
@@ -43,11 +43,8 @@ From the repository root:
 python scripts\job_intake_server.py
 ```
 
-The server binds to localhost only:
-
-```text
-http://127.0.0.1:3927
-```
+For local use, the server still binds to `127.0.0.1:3927`.
+For Pi deployment, run the intake server on `0.0.0.0:3927` and point the extension at your Pi address with `extensions/linkedin-job-clipper/config.js`.
 
 Captured jobs are written to:
 
@@ -147,6 +144,27 @@ Once the unpacked extension works in Opera:
 4. Select `extensions/linkedin-job-clipper/`.
 5. Opera will generate a `.crx` package in the parent directory.
 
+## Pi Deployment Setup
+
+For a Pi-hosted intake server, generate the Pi config and service files from the repo root:
+
+```powershell
+python scripts\setup_pi_job_intake.py --pi-host 192.168.1.50
+```
+
+This writes:
+
+- `extensions/linkedin-job-clipper/config.js` — points the clipper at `http://192.168.1.50:3927/jobs/capture`
+- `deploy/ai-job-intake.service` — a systemd service definition for auto-starting the intake server on the Pi
+
+Then install the service on the Pi:
+
+```bash
+sudo cp deploy/ai-job-intake.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ai-job-intake
+```
+
 ## Test The Flow
 
 1. Start the local intake server.
@@ -177,7 +195,7 @@ If required fields are missing, the popup disables saving and shows which fields
 - Chrome and Edge use the current Manifest V3 configuration directly.
 - Firefox support depends on the `browser_specific_settings.gecko` manifest block and the browser-agnostic API wrapper in `popup.js` and `content.js`.
 - Opera uses the Chromium path and should behave like Chrome for this extension.
-- All browsers still post only to `http://localhost:3927/jobs/capture`.
+- The extension now reads its intake URL from `config.js`, so you can switch between `localhost` and a Pi LAN address without changing the popup code.
 
 ## Localhost CORS
 

@@ -1,4 +1,4 @@
-const INTAKE_URL = "http://localhost:3927/jobs/capture";
+const INTAKE_URL = globalThis.__AI_JOB_INTAKE_URL__ || "http://localhost:3927/jobs/capture";
 const extensionApi = globalThis.browser ?? globalThis.chrome;
 
 const elements = {

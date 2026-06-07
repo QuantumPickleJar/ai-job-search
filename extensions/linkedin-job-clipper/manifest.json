@@ -17,8 +17,8 @@
     "activeTab"
   ],
   "host_permissions": [
-    "http://localhost:3927/*",
-    "http://127.0.0.1:3927/*"
+    "http://*/*",
+    "https://*/*"
   ],
   "content_scripts": [
     {
