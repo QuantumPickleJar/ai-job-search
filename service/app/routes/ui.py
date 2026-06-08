@@ -6,10 +6,8 @@ from html import escape
 from typing import Any
 from urllib.parse import parse_qs, quote
 
-from ai_job_search.apply_from_file import ApplyFromFileError, generate_cover_letter_draft, load_valid_fit_analysis
+from ai_job_search.apply_from_file import load_valid_fit_analysis
 from ai_job_search.intake import JobIntakeError
-from ai_job_search.model_provider import ModelProviderError
-from ai_job_search.providers import OllamaProvider
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -21,6 +19,7 @@ from app.services.job_store import (
     JobStore,
     ResourceNotFoundError,
 )
+from app.services.processing import ProcessingError, generate_cover_letter
 from app.services.ollama_client import OllamaClient, OllamaHealthError
 from app.services.task_queue import TaskManager
 from app.services.task_store import InvalidTaskDataError, TaskStore
@@ -403,6 +402,7 @@ def application_detail(
         "fit-analysis.json",
         "resume-targeting.md",
         "cover-letter-notes.md",
+        "cover-letter.md",
         "application-checklist.md",
         "job.json",
         "generated/cover-letter-draft.md",
@@ -467,15 +467,17 @@ async def generate_cover_letter_action(
         if not application.get("files"):
             raise ResourceNotFoundError("application workspace is empty")
         app_dir = settings.app_data_dir / "applications" / application_id
-        job_path = app_dir / "job.json"
         fit_path = app_dir / "fit-analysis.json"
-        if not job_path.exists() or not fit_path.exists():
+        notes_path = app_dir / "cover-letter-notes.md"
+        if not fit_path.exists() or not notes_path.exists():
             raise ResourceNotFoundError("application workspace is incomplete")
 
         fit = load_valid_fit_analysis(fit_path)
-        provider = OllamaProvider(model=settings.ollama_model, base_url=settings.ollama_base_url)
-        generate_cover_letter_draft(job_path, fit, provider, repo_root=settings.app_data_dir, output_dir=app_dir)
-    except (ApplyFromFileError, ModelProviderError, ResourceNotFoundError, InvalidStoredDataError, OSError) as exc:
+        if not isinstance(fit, dict):
+            raise ResourceNotFoundError("application workspace has invalid fit analysis")
+
+        generate_cover_letter(application_id, settings)
+    except (ProcessingError, ResourceNotFoundError, InvalidStoredDataError, OSError) as exc:
         return HTMLResponse(
             page(
                 title="Cover letter generation failed",
