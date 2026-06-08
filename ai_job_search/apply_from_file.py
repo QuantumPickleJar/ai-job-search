@@ -10,6 +10,7 @@ from typing import Any
 from ai_job_search.fit_scoring import FitScoringError, load_profile_context, score_job_file, validate_fit_analysis
 from ai_job_search.job_validation import load_json, validate_job
 from ai_job_search.model_provider import ModelProvider, ModelRequest
+from ai_job_search.model_provider import ModelProviderError
 
 
 class ApplyFromFileError(RuntimeError):
@@ -192,6 +193,40 @@ def write_application_checklist(path: Path, job: dict[str, Any], fit: dict[str, 
     path.write_text(content, encoding="utf-8")
 
 
+def _fallback_cover_letter_text(job: dict[str, Any], fit: dict[str, Any], reason: str) -> str:
+    title = str(job.get("title") or "the role").strip() or "the role"
+    company = str(job.get("company") or "your company").strip() or "your company"
+    location = str(job.get("location") or "").strip()
+    location_clause = f" in {location}" if location else ""
+
+    strongest = fit.get("strengths")
+    if isinstance(strongest, list):
+        strengths = [str(item).strip() for item in strongest if str(item).strip()]
+    else:
+        strengths = []
+    evidence_line = " ".join(strengths[:2]) if strengths else "I have relevant experience aligned with the role requirements."
+
+    return f"""[Draft generated with fallback mode]
+
+Dear Hiring Manager,
+
+I am writing to apply for the {title} position at {company}{location_clause}. I am excited about the opportunity and the fit between your role requirements and my background.
+
+{evidence_line}
+
+I am particularly motivated by the impact of this role and would welcome the opportunity to contribute with a pragmatic, delivery-focused approach while maintaining a high quality bar.
+
+Thank you for your consideration. I would appreciate the opportunity to discuss how I can contribute to your team.
+
+Sincerely,
+[Your Name]
+
+---
+Generator note: model-based draft generation was unavailable, so this fallback draft was created to keep the review workflow unblocked.
+Error detail: {reason}
+"""
+
+
 def generate_cover_letter_draft(
     job_path: Path,
     fit: dict[str, Any],
@@ -228,21 +263,25 @@ Captured job posting:
 Write a tailored cover letter draft for this role. Mention the strongest evidence and the most relevant angle, but avoid unsupported claims.
 """
 
-    response = provider.complete(
-        ModelRequest(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            temperature=0.2,
-            max_tokens=1200,
-            response_format="text",
+    try:
+        response = provider.complete(
+            ModelRequest(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=0.2,
+                max_tokens=1200,
+                response_format="text",
+            )
         )
-    )
 
-    draft_text = response.text.strip()
-    if draft_text.startswith("```"):
-        draft_text = draft_text.strip("`\n")
-        if draft_text.startswith("markdown"):
-            draft_text = draft_text.split("\n", 1)[1]
+        draft_text = response.text.strip()
+        if draft_text.startswith("```"):
+            draft_text = draft_text.strip("`\n")
+            if draft_text.startswith("markdown"):
+                draft_text = draft_text.split("\n", 1)[1]
+    except ModelProviderError as exc:
+        draft_text = _fallback_cover_letter_text(job, fit, str(exc)).strip()
+
     draft_path = generated_dir / "cover-letter-draft.md"
     draft_path.write_text(draft_text.strip() + "\n", encoding="utf-8")
     return draft_path
