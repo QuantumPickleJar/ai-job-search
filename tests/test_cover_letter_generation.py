@@ -63,11 +63,27 @@ def test_generate_cover_letter_draft_writes_fallback_when_provider_fails(tmp_pat
         encoding="utf-8",
     )
 
+    profile_dir = tmp_path / "profile"
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    (profile_dir / "resume_facts.md").write_text(
+        """# Resume Facts
+
+- Name: Vincent Morrill
+- C#
+- .NET Core
+- SQL
+- Enterprise application development
+- Unit testing
+""",
+        encoding="utf-8",
+    )
+
     fit = {
-        "strengths": [
-            "Strong backend engineering background.",
-            "Experience with production systems.",
-        ]
+        "matched_skills": ["C#", ".NET Core", "SQL"],
+        "missing_skills": [
+            "Minimum 2-3 years of software engineering experience",
+            "Working knowledge of Microsoft 365, Azure, Power Platform, or enterprise identity/access systems",
+        ],
     }
 
     output_dir = tmp_path / "applications" / "forterra-senior-platform-engineer"
@@ -76,6 +92,77 @@ def test_generate_cover_letter_draft_writes_fallback_when_provider_fails(tmp_pat
     draft_path = output_dir / "generated" / "cover-letter-draft.md"
     text = draft_path.read_text(encoding="utf-8")
     assert draft_path.exists()
-    assert "[Draft generated with fallback mode]" in text
     assert "Senior Platform Engineer" in text
     assert "Forterra" in text
+    assert "Minimum 2-3 years" not in text
+    assert "[Candidate Name]" not in text
+    assert "[Your Name]" not in text
+    assert "I lack" not in text
+    assert "I do not meet" not in text
+    assert "I don't meet" not in text
+    assert "limited exposure" not in text
+    assert "C#" in text
+    assert ".NET Core" in text
+    assert "SQL" in text
+    assert "Vincent Morrill" in text
+
+
+def test_generate_cover_letter_rewrites_invalid_provider_output(tmp_path: Path) -> None:
+    class InvalidProvider:
+        def complete(self, request: ModelRequest) -> ModelResponse:
+            del request
+            return ModelResponse(
+                text=(
+                    "Dear Hiring Manager,\n\n"
+                    "I do not meet Minimum 2-3 years of software engineering experience.\n\n"
+                    "Best regards,\n[Candidate Name]"
+                )
+            )
+
+    job_path = tmp_path / "job.json"
+    job_path.write_text(
+        json.dumps(
+            {
+                "title": "Application Services Software Engineer",
+                "company": "Forterra",
+                "location": "Remote",
+                "source_url": "https://example.test/jobs/forterra",
+                "description_text": "Maintain internal application services.",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    profile_dir = tmp_path / "profile"
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    (profile_dir / "resume_facts.md").write_text(
+        """# Resume Facts
+
+- Name: Vincent Morrill
+- C#
+- .NET Core
+- SQL
+- Enterprise application development
+- Unit testing
+""",
+        encoding="utf-8",
+    )
+
+    fit = {
+        "matched_skills": ["C#", ".NET Core", "SQL", "enterprise application development"],
+        "missing_skills": ["Working knowledge of Microsoft 365, Azure, Power Platform, or enterprise identity/access systems"],
+    }
+
+    output_dir = tmp_path / "applications" / "forterra-application-services-software-engineer"
+    generate_cover_letter_draft(job_path, fit, InvalidProvider(), repo_root=tmp_path, output_dir=output_dir)
+
+    text = (output_dir / "generated" / "cover-letter-draft.md").read_text(encoding="utf-8")
+    assert "Minimum 2-3 years" not in text
+    assert "[Candidate Name]" not in text
+    assert "I do not meet" not in text
+    assert "I lack" not in text
+    assert "limited exposure" not in text
+    assert "C#" in text
+    assert ".NET Core" in text
+    assert "SQL" in text
+    assert "enterprise application" in text.lower()

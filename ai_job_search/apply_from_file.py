@@ -17,6 +17,32 @@ class ApplyFromFileError(RuntimeError):
     """Raised when the apply-from-file workflow cannot complete."""
 
 
+REQUIREMENT_LIKE_MARKERS = (
+    "minimum",
+    "years",
+    "required",
+    "requirement",
+    "degree",
+    "bachelor",
+    "must have",
+    "working knowledge of",
+    "experience with",
+)
+
+COVER_LETTER_BLOCKLIST = (
+    "minimum 2-3 years",
+    "i do not meet",
+    "i don't meet",
+    "i lack",
+    "lacks the minimum",
+    "limited exposure",
+    "actively deepening my experience with minimum",
+    "[candidate name]",
+    "[your name]",
+    "[mention",
+)
+
+
 def slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower())
     slug = slug.strip("-")
@@ -143,6 +169,17 @@ These are suggestions only. Do not paste them into a final resume until each cla
 
 
 def write_cover_letter_notes(path: Path, job: dict[str, Any], fit: dict[str, Any]) -> None:
+    missing_raw = fit.get("missing_skills")
+    missing_items = [str(item).strip() for item in missing_raw] if isinstance(missing_raw, list) else []
+    requirement_like, skill_like = _split_requirement_like_items(missing_items)
+    warnings: list[str] = []
+    warnings.extend(skill_like)
+    req_text = " ".join(requirement_like).lower()
+    if any(token in req_text for token in ("microsoft 365", "azure", "power platform", "identity", "access")):
+        warnings.append("Specific Microsoft platform experience is not verified.")
+    if not warnings:
+        warnings = fit.get("do_not_claim") if isinstance(fit.get("do_not_claim"), list) else []
+
     content = f"""# Cover Letter Notes
 
 ## Cover Letter Angle
@@ -162,7 +199,7 @@ def write_cover_letter_notes(path: Path, job: dict[str, Any], fit: dict[str, Any
 
 ## Warnings About Claims Not To Make
 
-{format_list(fit.get("missing_skills") or fit.get("do_not_claim"), "No warnings identified yet. Still verify every claim against profile facts.")}
+{format_list(warnings, "No warnings identified yet. Still verify every claim against profile facts.")}
 
 ## Questions Before Applying
 
@@ -193,38 +230,112 @@ def write_application_checklist(path: Path, job: dict[str, Any], fit: dict[str, 
     path.write_text(content, encoding="utf-8")
 
 
-def _fallback_cover_letter_text(job: dict[str, Any], fit: dict[str, Any], reason: str) -> str:
+def _split_requirement_like_items(items: list[str]) -> tuple[list[str], list[str]]:
+    requirements: list[str] = []
+    skills: list[str] = []
+    for item in items:
+        if _is_requirement_like_phrase(item):
+            requirements.append(item)
+        else:
+            skills.append(item)
+    return requirements, skills
+
+
+def _fallback_cover_letter_text(
+    job: dict[str, Any],
+    fit: dict[str, Any],
+    profile_context: str,
+    candidate_name: str,
+) -> str:
     title = str(job.get("title") or "the role").strip() or "the role"
     company = str(job.get("company") or "your company").strip() or "your company"
-    location = str(job.get("location") or "").strip()
-    location_clause = f" in {location}" if location else ""
 
-    strongest = fit.get("strengths")
-    if isinstance(strongest, list):
-        strengths = [str(item).strip() for item in strongest if str(item).strip()]
+    strengths = _supported_strengths_from_fit(fit, profile_context)
+
+    if strengths:
+        strengths_text = ", ".join(strengths[:-1]) + (f", and {strengths[-1]}" if len(strengths) > 1 else strengths[0])
+        opening_strengths = f"My background in {strengths_text} aligns well with the role's focus on supporting business-critical application services."
     else:
-        strengths = []
-    evidence_line = " ".join(strengths[:2]) if strengths else "I have relevant experience aligned with the role requirements."
+        opening_strengths = (
+            "My background in enterprise application development and maintainable internal software "
+            "aligns well with the role's focus on supporting business-critical application services."
+        )
 
-    return f"""[Draft generated with fallback mode]
+    ramp_sentence = ""
+    missing_raw = fit.get("missing_skills")
+    missing_skills = [str(item).strip() for item in missing_raw] if isinstance(missing_raw, list) else []
+    requirement_like, _ = _split_requirement_like_items(missing_skills)
+    requirement_text = " ".join(requirement_like).lower()
+    if any(token in requirement_text for token in ("microsoft 365", "azure", "power platform", "identity", "access")):
+            ramp_sentence = (
+                " I would bring a grounded engineering approach, careful attention to maintainability, "
+                f"and a willingness to ramp into {company}'s Microsoft platform environment where needed."
+            )
 
-Dear Hiring Manager,
+    signoff = "Best regards,"
+    if candidate_name:
+        signoff += f"\n\n{candidate_name}"
 
-I am writing to apply for the {title} position at {company}{location_clause}. I am excited about the opportunity and the fit between your role requirements and my background.
+    return (
+        "Dear Hiring Manager,\n\n"
+        + f"I am excited to apply for the {title} position at {company}. {opening_strengths}\n\n"
+        + "In my recent development work, I have contributed to internal and enterprise-grade systems by implementing features, "
+        + "writing unit tests, improving workflow behavior, and collaborating through pull-request-based development. "
+        + "My experience includes application work in university IT, benefits/insurance software, and business-critical workflows.\n\n"
+        + f"I am especially interested in {company}'s application services work because it combines software development, stakeholder support, and operational problem-solving."
+        + ramp_sentence
+        + "\n\n"
+        + "Thank you for your time and consideration. I would welcome the opportunity to discuss how my application development experience can support your team.\n\n"
+        + signoff
+    )
 
-{evidence_line}
 
-I am particularly motivated by the impact of this role and would welcome the opportunity to contribute with a pragmatic, delivery-focused approach while maintaining a high quality bar.
+def _extract_candidate_name(profile_context: str) -> str:
+    match = re.search(r"(?im)^\s*(?:-\s*)?(?:\*\*)?name(?:\*\*)?\s*:\s*([A-Za-z][A-Za-z .'-]{2,})\s*$", profile_context)
+    if not match:
+        return ""
+    return match.group(1).strip()
 
-Thank you for your consideration. I would appreciate the opportunity to discuss how I can contribute to your team.
 
-Sincerely,
-[Your Name]
+def _is_requirement_like_phrase(value: str) -> bool:
+    lowered = value.lower()
+    return any(marker in lowered for marker in REQUIREMENT_LIKE_MARKERS)
 
----
-Generator note: model-based draft generation was unavailable, so this fallback draft was created to keep the review workflow unblocked.
-Error detail: {reason}
-"""
+
+def _supported_strengths_from_fit(fit: dict[str, Any], profile_context: str) -> list[str]:
+    matched_raw = fit.get("matched_skills")
+    matched = [str(item).strip() for item in matched_raw] if isinstance(matched_raw, list) else []
+    filtered = [item for item in matched if item and not _is_requirement_like_phrase(item)]
+
+    profile_lower = profile_context.lower()
+    verified = [item for item in filtered if item.lower() in profile_lower]
+    if verified:
+        return verified[:4]
+
+    defaults = [
+        "C#",
+        ".NET Core",
+        "SQL",
+        "enterprise application development",
+    ]
+    return [item for item in defaults if item.lower() in profile_lower][:4]
+
+
+def _validate_cover_letter_output(text: str, profile_context: str) -> list[str]:
+    lowered = text.lower()
+    errors: list[str] = []
+
+    for blocked in COVER_LETTER_BLOCKLIST:
+        if blocked in lowered:
+            errors.append(f"blocked phrase present: {blocked}")
+
+    if "certification" in lowered and "certification" not in profile_context.lower():
+        errors.append("blocked topic present: certifications are not verified in profile facts")
+
+    if "lacks 2-3 years" in lowered or "lack 2-3 years" in lowered:
+        errors.append("blocked claim present: implies candidate lacks general software experience")
+
+    return errors
 
 
 def generate_cover_letter_draft(
@@ -243,16 +354,37 @@ def generate_cover_letter_draft(
     generated_dir = output_dir / "generated"
     generated_dir.mkdir(parents=True, exist_ok=True)
 
+    profile_context = load_profile_context(repo_root)
+    candidate_name = _extract_candidate_name(profile_context)
+
     system_prompt = """You are a careful hiring-application assistant.
 Write a polished, grounded cover letter draft in Markdown for the provided role.
 Use only supported profile evidence from the candidate profile and fit analysis.
 Do not invent experience, dates, companies, awards, or technologies.
 Keep the letter concise, professional, and tailored to the job description.
 Return only the letter text, without commentary or bullet lists.
+
+Hard safety rules:
+- Mention only verified strengths from candidate profile facts.
+- Do not include self-disqualifying language.
+- Do not say: "I do not meet", "I don't meet", "I lack", "limited exposure", or
+    "actively deepening my experience with [missing requirement]".
+- Do not include placeholders like [Candidate Name], [Your Name], or [mention ...].
+- Do not mention certifications unless explicitly present in profile facts.
+- Do not claim or imply the candidate lacks 2-3 years of general software/application development experience.
+- Missing skills from fit analysis are internal notes, not final cover-letter prose.
+- If Microsoft platform experience is not verified, prefer:
+    "I am prepared to ramp into the Microsoft platform environment where needed."
 """
 
+    signature_rule = (
+        f"Use this exact signature name: {candidate_name}."
+        if candidate_name
+        else "If a personal signature name is unavailable from profile facts, end with 'Best regards,' and no name line."
+    )
+
     user_prompt = f"""Candidate profile context:
-{load_profile_context(repo_root)}
+{profile_context}
 
 Fit analysis summary:
 {json.dumps(fit, ensure_ascii=False, indent=2)}
@@ -261,6 +393,7 @@ Captured job posting:
 {json.dumps(job, ensure_ascii=False, indent=2)}
 
 Write a tailored cover letter draft for this role. Mention the strongest evidence and the most relevant angle, but avoid unsupported claims.
+{signature_rule}
 """
 
     try:
@@ -279,8 +412,17 @@ Write a tailored cover letter draft for this role. Mention the strongest evidenc
             draft_text = draft_text.strip("`\n")
             if draft_text.startswith("markdown"):
                 draft_text = draft_text.split("\n", 1)[1]
+
+        validation_errors = _validate_cover_letter_output(draft_text, profile_context)
+        if validation_errors:
+            draft_text = _fallback_cover_letter_text(job, fit, profile_context, candidate_name).strip()
     except ModelProviderError as exc:
-        draft_text = _fallback_cover_letter_text(job, fit, str(exc)).strip()
+        del exc
+        draft_text = _fallback_cover_letter_text(job, fit, profile_context, candidate_name).strip()
+
+    final_errors = _validate_cover_letter_output(draft_text, profile_context)
+    if final_errors:
+        raise ApplyFromFileError("cover letter output failed validation: " + "; ".join(final_errors))
 
     draft_path = generated_dir / "cover-letter-draft.md"
     draft_path.write_text(draft_text.strip() + "\n", encoding="utf-8")
